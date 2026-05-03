@@ -2,7 +2,8 @@
 
 A Google Apps Script Web App that renders a single-screen dashboard combining 中央氣象局 (CWA) weather, today's Google Calendar events, and a countdown list pulled from Google Sheets. Designed as a 736×414 paper-style canvas suitable for an always-on small display (e.g. a tablet or kiosk).
 
-![preview](Design/Paper%20Dashboard.html)
+<img width="1644" height="933" alt="image" src="https://github.com/user-attachments/assets/7430641e-3c28-4b32-8e98-b324fb850945" />
+
 
 ## What it shows
 
