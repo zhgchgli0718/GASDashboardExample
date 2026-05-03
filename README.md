@@ -5,6 +5,14 @@ A Google Apps Script Web App that renders a single-screen dashboard combining �
 <img width="1644" height="933" alt="image" src="https://github.com/user-attachments/assets/7430641e-3c28-4b32-8e98-b324fb850945" />
 
 
+### Stop Starting AI Coding from Scratch
+
+Let AI Agents handle Google Apps Script integration and development.
+
+This project demonstrates how to turn an unused device into a personal desktop Dashboard with AI, using Claude Design & Claude Code to design, implement, and deploy a Google Apps Script-powered application.
+
+Full implementation article: https://zhgchg.li/posts/35cc65327d28/
+
 ## What it shows
 
 - **天氣 / Weather** — CWA `F-C0032-001` 36-hour forecast, 3 × 12-hour blocks (Wx, PoP, MinT/MaxT, CI). Default location: 臺北市.
