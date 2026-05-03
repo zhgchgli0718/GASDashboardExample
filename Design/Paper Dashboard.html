@@ -1,0 +1,1072 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>紙感儀表 · Paper Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700;900&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.0/babel.min.js"></script>
+
+<style>
+  :root {
+    --bg: #f1ebdc;
+    --bg-deep: #e8e0cc;
+    --ink: #2a2520;
+    --ink-soft: #6b6358;
+    --ink-faint: #9a9080;
+    --hairline: #cdc3ae;
+    --stamp: #a0382e;
+    --stamp-deep: #7a2820;
+    --rain: #3a5a7a;
+    --warm: #b94a3a;
+    --cool: #2d5a3d;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background: #14110d;
+    overflow: hidden;
+    font-family: 'Noto Serif TC', 'Source Serif 4', Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #wrap {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  #stage {
+    width: 736px; height: 414px;
+    transform-origin: center center;
+    position: relative;
+  }
+
+  #device {
+    width: 736px; height: 414px;
+    background: var(--bg);
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.16  0 0 0 0 0.14  0 0 0 0 0.12  0 0 0 0.08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      radial-gradient(ellipse at 30% 20%, rgba(255,250,235,0.5), transparent 60%),
+      radial-gradient(ellipse at 80% 90%, rgba(160,56,46,0.04), transparent 60%);
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 30px 80px rgba(0,0,0,0.5),
+      0 8px 24px rgba(0,0,0,0.3),
+      inset 0 0 0 1px rgba(0,0,0,0.05);
+    color: var(--ink);
+  }
+
+  /* deckle edge - subtle paper border imperfection */
+  #device::before {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 60px rgba(120, 90, 50, 0.08);
+    z-index: 1;
+  }
+
+  /* === Header === */
+  .header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 88px;
+    display: flex;
+    align-items: stretch;
+    padding: 14px 24px 0 28px;
+    z-index: 2;
+  }
+
+  .date-block {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+  }
+  .date-line1 {
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    font-weight: 500;
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+  }
+  .date-line2 {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    font-family: 'Noto Serif TC', serif;
+  }
+  .date-num {
+    font-size: 38px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    line-height: 1;
+    font-feature-settings: 'lnum';
+  }
+  .date-num .slash {
+    color: var(--ink-faint);
+    font-weight: 400;
+    margin: 0 2px;
+  }
+  .date-weekday {
+    font-size: 18px;
+    color: var(--ink);
+    letter-spacing: 0.15em;
+    font-weight: 500;
+  }
+  .date-line3 {
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.2em;
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    margin-top: 2px;
+  }
+
+  /* === Flip Clock === */
+  .clock {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-top: 4px;
+  }
+  .flip-group { display: flex; gap: 3px; }
+  .flip-card {
+    position: relative;
+    width: 44px;
+    height: 60px;
+    perspective: 360px;
+  }
+  .flip-half {
+    position: absolute;
+    left: 0; right: 0;
+    height: 30px;
+    background: linear-gradient(180deg, #2f2920 0%, #221d18 100%);
+    color: #f5efde;
+    overflow: hidden;
+    font-family: 'Source Serif 4', 'Noto Serif TC', serif;
+    font-weight: 700;
+    font-size: 56px;
+    line-height: 60px;
+    text-align: center;
+    font-feature-settings: 'lnum', 'tnum';
+  }
+  .flip-half.top {
+    top: 0;
+    border-radius: 4px 4px 0 0;
+    box-shadow: inset 0 -1px 0 #000, 0 1px 0 rgba(0,0,0,0.3);
+  }
+  .flip-half.top > span { display: block; line-height: 60px; transform: translateY(0); }
+  .flip-half.bottom {
+    bottom: 0;
+    border-radius: 0 0 4px 4px;
+    background: linear-gradient(180deg, #1d1814 0%, #2a2420 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .flip-half.bottom > span { display: block; line-height: 60px; transform: translateY(-30px); }
+  .flip-flap {
+    position: absolute;
+    left: 0; right: 0;
+    height: 30px;
+    overflow: hidden;
+    backface-visibility: hidden;
+    color: #f5efde;
+    font-family: 'Source Serif 4', 'Noto Serif TC', serif;
+    font-weight: 700;
+    font-size: 56px;
+    text-align: center;
+    font-feature-settings: 'lnum', 'tnum';
+    z-index: 2;
+  }
+  .flip-flap.flap-top {
+    top: 0;
+    background: linear-gradient(180deg, #2f2920 0%, #221d18 100%);
+    border-radius: 4px 4px 0 0;
+    transform-origin: bottom;
+    animation: flap-down 0.32s cubic-bezier(0.4, 0, 0.7, 0.2) forwards;
+    box-shadow: inset 0 -1px 0 #000;
+  }
+  .flip-flap.flap-top > span { display: block; line-height: 60px; }
+  .flip-flap.flap-bottom {
+    bottom: 0;
+    background: linear-gradient(180deg, #1d1814 0%, #2a2420 100%);
+    border-radius: 0 0 4px 4px;
+    transform-origin: top;
+    transform: rotateX(90deg);
+    animation: flap-up 0.32s cubic-bezier(0.3, 0.85, 0.6, 1) 0.32s forwards;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .flip-flap.flap-bottom > span { display: block; line-height: 60px; transform: translateY(-30px); }
+
+  @keyframes flap-down { 0% { transform: rotateX(0); } 100% { transform: rotateX(-90deg); } }
+  @keyframes flap-up   { 0% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+
+  .clock-colon {
+    color: var(--ink);
+    font-family: 'Source Serif 4', serif;
+    font-size: 38px;
+    font-weight: 600;
+    padding: 0 4px;
+    line-height: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.85;
+  }
+
+  /* seconds variant */
+  .flip-card.sec { width: 28px; height: 38px; perspective: 240px; }
+  .flip-card.sec .flip-half,
+  .flip-card.sec .flip-flap { height: 19px; font-size: 36px; line-height: 38px; }
+  .flip-card.sec .flip-half > span,
+  .flip-card.sec .flip-flap > span { line-height: 38px; }
+  .flip-card.sec .flip-half.bottom > span { transform: translateY(-19px); }
+  .flip-card.sec .flip-flap.flap-bottom > span { transform: translateY(-19px); }
+  .clock-colon.sec { font-size: 24px; height: 38px; line-height: 38px; padding: 0 2px; }
+
+  /* === Hairline divider === */
+  .hairline {
+    position: absolute;
+    top: 88px; left: 28px; right: 28px;
+    height: 1px;
+    background: var(--hairline);
+    z-index: 2;
+  }
+  .hairline::before {
+    content: '';
+    position: absolute;
+    top: 3px; left: 0; right: 0;
+    height: 1px;
+    background: var(--hairline);
+    opacity: 0.5;
+  }
+
+  /* === Tab content area === */
+  .content {
+    position: absolute;
+    top: 96px; left: 28px; right: 28px;
+    bottom: 38px;
+    z-index: 2;
+    overflow: hidden;
+  }
+
+  .tab-panel {
+    position: absolute; inset: 0;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+    pointer-events: none;
+  }
+  .tab-panel.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .panel-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.45em;
+    color: var(--ink);
+  }
+  .panel-title-en {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+  }
+
+  /* === Weather === */
+  .weather-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100%;
+  }
+  .weather-city {
+    display: flex;
+    flex-direction: column;
+    padding-right: 22px;
+  }
+  .weather-city + .weather-city {
+    padding-left: 22px;
+    padding-right: 0;
+    border-left: 1px solid var(--hairline);
+  }
+  .weather-loc-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+  .weather-loc {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 16px;
+    letter-spacing: 0.4em;
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .weather-loc-en {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+  }
+  .weather-cond {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.12em;
+  }
+  .weather-temp-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    margin-top: 4px;
+  }
+  .weather-temp {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 700;
+    font-size: 68px;
+    line-height: 0.95;
+    color: var(--ink);
+    font-feature-settings: 'lnum', 'tnum';
+    letter-spacing: -0.04em;
+    position: relative;
+    display: inline-block;
+  }
+  .weather-temp .deg {
+    position: absolute;
+    top: 4px;
+    font-size: 26px;
+    font-weight: 400;
+    color: var(--ink-soft);
+  }
+  .weather-hilo {
+    font-family: 'Source Serif 4', serif;
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: 0.08em;
+    font-feature-settings: 'lnum', 'tnum';
+    padding-bottom: 4px;
+    line-height: 1.5;
+  }
+  .weather-hilo .sep { color: var(--ink-faint); margin: 0 4px; }
+  .weather-big-icon {
+    color: var(--ink);
+    margin-left: auto;
+    padding-bottom: 4px;
+  }
+
+  .weather-hourly {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    margin-top: 10px;
+    border-top: 1px dashed var(--hairline);
+    padding-top: 8px;
+  }
+  .hour-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .hour-time {
+    font-family: 'Source Serif 4', serif;
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.08em;
+    font-feature-settings: 'lnum';
+  }
+  .hour-icon { width: 18px; height: 18px; color: var(--ink); }
+  .hour-temp {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ink);
+    font-feature-settings: 'lnum', 'tnum';
+  }
+  .hour-rain {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    color: var(--stamp);
+    font-feature-settings: 'lnum';
+    font-style: italic;
+  }
+
+  /* === Calendar === */
+  .cal-now {
+    background: var(--bg-deep);
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100%' height='100%' fill='%23e8e0cc'/><line x1='0' y1='0' x2='100' y2='100' stroke='%23d4cdbf' stroke-width='0.3' opacity='0.4'/></svg>");
+    border: 1px solid var(--hairline);
+    padding: 14px 20px;
+    position: relative;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cal-now.ongoing::before { content: '進行中'; color: var(--cool); }
+  .cal-now.upcoming::before { content: '即將'; color: var(--stamp); }
+  .cal-now::before {
+    position: absolute;
+    top: -8px; left: 16px;
+    background: var(--bg);
+    padding: 0 8px;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    font-weight: 500;
+  }
+  .cal-event-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 4px;
+    letter-spacing: 0.05em;
+  }
+  .cal-event-meta {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.15em;
+  }
+  .cal-countdown {
+    text-align: right;
+    font-family: 'Source Serif 4', serif;
+  }
+  .cal-cd-num {
+    font-size: 44px;
+    font-weight: 700;
+    color: var(--stamp);
+    line-height: 1;
+    font-feature-settings: 'lnum', 'tnum';
+  }
+  .cal-cd-num.cool { color: var(--cool); }
+  .cal-cd-unit {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.4em;
+    font-style: normal;
+    margin-top: 2px;
+  }
+
+  .cal-list-head {
+    font-size: 9px;
+    letter-spacing: 0.28em;
+    color: var(--ink-faint);
+    font-style: italic;
+    font-family: 'Source Serif 4', serif;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--hairline);
+    padding-bottom: 4px;
+    margin-bottom: 2px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .cal-list { display: flex; flex-direction: column; }
+  .cal-row {
+    display: grid;
+    grid-template-columns: 110px 1fr 90px;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px dashed var(--hairline);
+    font-size: 13px;
+  }
+  .cal-row:last-child { border-bottom: none; }
+  .cal-row-time {
+    font-family: 'Source Serif 4', serif;
+    font-feature-settings: 'lnum', 'tnum';
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .cal-row-name {
+    font-family: 'Noto Serif TC', serif;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cal-row-loc {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.08em;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cal-empty {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-faint);
+    text-align: center;
+    padding: 60px 0;
+    letter-spacing: 0.1em;
+  }
+  .cal-remain {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.18em;
+    text-align: right;
+    margin-top: 6px;
+  }
+
+  /* === Countdown === */
+  .cd-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px 28px;
+  }
+  .cd-item {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    align-items: center;
+    gap: 14px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .cd-stamp {
+    width: 60px; height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--stamp);
+    color: var(--stamp);
+    font-family: 'Noto Serif TC', serif;
+    text-align: center;
+    transform: rotate(-2deg);
+    background: rgba(160, 56, 46, 0.04);
+    position: relative;
+  }
+  .cd-stamp.past { border-color: var(--ink-soft); color: var(--ink-soft); background: rgba(0,0,0,0.03); }
+  .cd-stamp.today { border-color: var(--cool); color: var(--cool); background: rgba(45, 90, 61, 0.05); }
+  .cd-stamp::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border: 1px solid currentColor;
+    opacity: 0.3;
+  }
+  .cd-num {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 700;
+    font-size: 22px;
+    line-height: 1;
+    font-feature-settings: 'lnum', 'tnum';
+  }
+  .cd-day-label {
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    margin-top: 2px;
+    font-style: italic;
+    font-family: 'Source Serif 4', serif;
+  }
+  .cd-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .cd-name {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 14px;
+    color: var(--ink);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cd-date {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.1em;
+    font-feature-settings: 'lnum';
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cd-yearly-tag {
+    display: inline-block;
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    color: var(--stamp);
+    font-style: normal;
+    font-family: 'Noto Serif TC', serif;
+    border: 1px solid var(--stamp);
+    padding: 0 4px;
+    margin-left: 6px;
+    transform: translateY(-1px);
+    opacity: 0.75;
+  }
+
+  /* === Footer: tab indicators + progress === */
+  .footer {
+    position: absolute;
+    bottom: 0; left: 28px; right: 28px;
+    height: 32px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .tabs {
+    display: flex;
+    gap: 28px;
+    flex: 1;
+  }
+  .tab-label {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    color: var(--ink-faint);
+    cursor: pointer;
+    transition: color 0.3s;
+    position: relative;
+    padding: 4px 0;
+  }
+  .tab-label.active { color: var(--ink); font-weight: 500; }
+  .tab-label.active::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: -2px;
+    width: 14px; height: 1px;
+    background: var(--stamp);
+  }
+  .progress {
+    width: 96px;
+    height: 1px;
+    background: var(--hairline);
+    position: relative;
+  }
+  .progress-fill {
+    position: absolute;
+    top: -0.5px; left: 0;
+    height: 2px;
+    background: var(--ink);
+    transition: width 0.1s linear;
+  }
+  .progress-num {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 10px;
+    color: var(--ink-faint);
+    font-feature-settings: 'lnum', 'tnum';
+    letter-spacing: 0.1em;
+    min-width: 28px;
+  }
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <div id="stage">
+    <div id="device">
+      <div id="root"></div>
+    </div>
+  </div>
+</div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ---- auto-scale 736×414 stage to viewport ----
+function fitStage() {
+  const stage = document.getElementById('stage');
+  if (!stage) return;
+  const s = Math.min(window.innerWidth / 736, window.innerHeight / 414);
+  stage.style.transform = `scale(${s})`;
+}
+window.addEventListener('resize', fitStage);
+window.addEventListener('load', fitStage);
+fitStage();
+
+// =================================================================
+// FLIP CLOCK
+// =================================================================
+function FlipDigit({ value, size = 'lg', duration = 640 }) {
+  const [current, setCurrent] = useState(value);
+  const [previous, setPrevious] = useState(value);
+  const [flipping, setFlipping] = useState(false);
+
+  useEffect(() => {
+    if (value !== current) {
+      setPrevious(current);
+      setFlipping(true);
+      const t = setTimeout(() => {
+        setCurrent(value);
+        setFlipping(false);
+      }, duration);
+      return () => clearTimeout(t);
+    }
+  }, [value, current, duration]);
+
+  const next = value;
+  const cls = `flip-card ${size === 'sm' ? 'sec' : ''}`;
+
+  return (
+    <div className={cls}>
+      <div className="flip-half top"><span>{flipping ? next : current}</span></div>
+      <div className="flip-half bottom"><span>{flipping ? previous : current}</span></div>
+      {flipping && (
+        <>
+          <div className="flip-flap flap-top" key={`t-${previous}-${next}`}><span>{previous}</span></div>
+          <div className="flip-flap flap-bottom" key={`b-${previous}-${next}`}><span>{next}</span></div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function FlipClock({ now }) {
+  const h = now.getHours();
+  const m = now.getMinutes();
+  const s = now.getSeconds();
+  const h1 = Math.floor(h / 10), h2 = h % 10;
+  const m1 = Math.floor(m / 10), m2 = m % 10;
+  const s1 = Math.floor(s / 10), s2 = s % 10;
+  return (
+    <div className="clock">
+      <div className="flip-group"><FlipDigit value={h1} /><FlipDigit value={h2} /></div>
+      <div className="clock-colon">:</div>
+      <div className="flip-group"><FlipDigit value={m1} /><FlipDigit value={m2} /></div>
+      <div className="clock-colon">:</div>
+      <div className="flip-group"><FlipDigit value={s1} duration={360} /><FlipDigit value={s2} duration={360} /></div>
+    </div>
+  );
+}
+
+// =================================================================
+// HEADER
+// =================================================================
+const WEEKDAYS_ZH = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+const WEEKDAYS_EN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS_EN   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function Header({ now }) {
+  const y = now.getFullYear();
+  const mo = now.getMonth() + 1;
+  const d = now.getDate();
+  const wd = now.getDay();
+  const week = Math.ceil((((now - new Date(y,0,1)) / 86400000) + new Date(y,0,1).getDay() + 1) / 7);
+  return (
+    <div className="header">
+      <div className="date-block">
+        <div className="date-line1">A.D. {y} · {MONTHS_EN[mo-1]}</div>
+        <div className="date-line2">
+          <span className="date-num">{mo}<span className="slash">/</span>{d}</span>
+          <span className="date-weekday">{WEEKDAYS_ZH[wd]}</span>
+        </div>
+        <div className="date-line3">{WEEKDAYS_EN[wd]} &nbsp;·&nbsp; week {week}</div>
+      </div>
+      <FlipClock now={now} />
+    </div>
+  );
+}
+
+// =================================================================
+// TAB 1 — WEATHER
+// =================================================================
+function WeatherIcon({ type, size = 22 }) {
+  const stroke = 'currentColor';
+  const props = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke, strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' };
+  if (type === 'sun')    return <svg {...props}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>;
+  if (type === 'cloud')  return <svg {...props}><path d="M7 18a4 4 0 010-8 6 6 0 0111.5 1.5A4 4 0 0117 18H7z"/></svg>;
+  if (type === 'rain')   return <svg {...props}><path d="M7 14a4 4 0 010-8 6 6 0 0111.5 1.5A4 4 0 0117 14H7z"/><path d="M9 18l-1 3M13 18l-1 3M17 18l-1 3"/></svg>;
+  if (type === 'partly') return <svg {...props}><circle cx="8" cy="9" r="3"/><path d="M11 16a3 3 0 010-6 5 5 0 019.5 1.5A3 3 0 0119 16h-8z"/></svg>;
+  return null;
+}
+
+const WEATHER_CITIES = [
+  {
+    zh: '臺　北', en: 'Taipei',
+    cond: 'Partly Cloudy', condZh: '多雲時晴', icon: 'partly',
+    temp: 22, hi: 25, lo: 19, feel: 21,
+    hourly: [
+      { h: '15', t: 23, type: 'partly', rain: 10 },
+      { h: '16', t: 23, type: 'cloud',  rain: 20 },
+      { h: '17', t: 22, type: 'cloud',  rain: 30 },
+      { h: '18', t: 21, type: 'rain',   rain: 60 },
+    ],
+  },
+  {
+    zh: '新　北', en: 'New Taipei',
+    cond: 'Light Rain', condZh: '局部短暫雨', icon: 'rain',
+    temp: 21, hi: 23, lo: 18, feel: 20,
+    hourly: [
+      { h: '15', t: 22, type: 'rain',  rain: 50 },
+      { h: '16', t: 21, type: 'rain',  rain: 70 },
+      { h: '17', t: 21, type: 'rain',  rain: 75 },
+      { h: '18', t: 20, type: 'cloud', rain: 40 },
+    ],
+  },
+];
+
+function WeatherPanel() {
+  return (
+    <div className="tab-panel-inner">
+      <div className="panel-head">
+        <span className="panel-title">天　氣</span>
+        <span className="panel-title-en">CWA · 25.04°N 121.56°E</span>
+      </div>
+      <div className="weather-split">
+        {WEATHER_CITIES.map((c, i) => (
+          <div className="weather-city" key={i}>
+            <div className="weather-loc-row">
+              <span className="weather-loc">{c.zh}</span>
+              <span className="weather-loc-en">{c.en}</span>
+            </div>
+            <div className="weather-cond">{c.cond} · {c.condZh}</div>
+            <div className="weather-temp-row">
+              <span className="weather-temp">{c.temp}<span className="deg">°</span></span>
+              <span className="weather-hilo">
+                H {c.hi}° <span className="sep">·</span> L {c.lo}°<br/>
+                體感 {c.feel}°
+              </span>
+              <span className="weather-big-icon"><WeatherIcon type={c.icon} size={36} /></span>
+            </div>
+            <div className="weather-hourly">
+              {c.hourly.map(h => (
+                <div className="hour-col" key={h.h}>
+                  <div className="hour-time">{h.h}:00</div>
+                  <div className="hour-icon"><WeatherIcon type={h.type} size={18} /></div>
+                  <div className="hour-temp">{h.t}°</div>
+                  <div className="hour-rain">{h.rain}%</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// =================================================================
+// TAB 2 — CALENDAR
+// =================================================================
+// status: 'ongoing' (進行中) / 'upcoming' (下一場即將開始) / 'later'
+const CAL_EVENTS = [
+  { time: '14:00 — 15:30', name: '與設計師對焦 · v2 review', loc: 'Zoom',         status: 'ongoing',  remainMin: 28 },
+  { time: '16:30 — 17:00', name: '週會 · 工程組',           loc: 'Meet · 線上',   status: 'later',    remainMin: 178 },
+  { time: '19:30',         name: '晚餐 · 父母來訪',         loc: '永康街',        status: 'later',    remainMin: 358 },
+  { time: '21:00',         name: '回看週報 · 寫月結',       loc: '書房',          status: 'later',    remainMin: 448 },
+];
+
+function CalendarPanel() {
+  const focal = CAL_EVENTS[0];
+  const rest = CAL_EVENTS.slice(1);
+  const visibleRest = rest.slice(0, 3);
+  const hiddenCount = rest.length - visibleRest.length;
+  const isOngoing = focal.status === 'ongoing';
+  const cdLabel = isOngoing ? '分　鐘　剩' : '分　鐘　後';
+  return (
+    <div className="tab-panel-inner">
+      <div className="panel-head">
+        <span className="panel-title">行　事　曆</span>
+        <span className="panel-title-en">Today · {CAL_EVENTS.length} events</span>
+      </div>
+      {focal ? (
+        <>
+          <div className={`cal-now ${isOngoing ? 'ongoing' : 'upcoming'}`}>
+            <div>
+              <div className="cal-event-title">{focal.name}</div>
+              <div className="cal-event-meta">{focal.time} &nbsp;·&nbsp; {focal.loc}</div>
+            </div>
+            <div className="cal-countdown">
+              <div className={`cal-cd-num ${isOngoing ? 'cool' : ''}`}>{focal.remainMin}</div>
+              <div className="cal-cd-unit">{cdLabel}</div>
+            </div>
+          </div>
+          {visibleRest.length > 0 && (
+            <>
+              <div className="cal-list-head">
+                <span>upcoming · 之後</span>
+                <span>location</span>
+              </div>
+              <div className="cal-list">
+                {visibleRest.map((e, i) => (
+                  <div className="cal-row" key={i}>
+                    <span className="cal-row-time">{e.time}</span>
+                    <span className="cal-row-name">{e.name}</span>
+                    <span className="cal-row-loc">{e.loc}</span>
+                  </div>
+                ))}
+              </div>
+              {hiddenCount > 0 && (
+                <div className="cal-remain">…and {hiddenCount} more</div>
+              )}
+            </>
+          )}
+        </>
+      ) : (
+        <div className="cal-empty">今日無行程 · no events today</div>
+      )}
+    </div>
+  );
+}
+
+// =================================================================
+// TAB 3 — COUNTDOWN / D-DAY
+// =================================================================
+const CD_EVENTS = [
+  { name: '出國 · 京都賞楓',   date: '2026-11-12', target: '2026-11-12' },
+  { name: '結婚紀念日',        date: '2026-06-08', target: '2026-06-08', yearly: true },
+  { name: '年終 / Year End',   date: '2026-12-31', target: '2026-12-31' },
+  { name: '入職滿三年',        date: '2023-08-15', target: '2023-08-15' },
+];
+
+function daysBetween(target, today) {
+  const t = new Date(target);
+  const d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((t - d) / 86400000);
+}
+
+function CountdownPanel({ now }) {
+  return (
+    <div className="tab-panel-inner">
+      <div className="panel-head">
+        <span className="panel-title">倒　數　日</span>
+        <span className="panel-title-en">D-Day · counting</span>
+      </div>
+      <div className="cd-grid">
+        {CD_EVENTS.map((e, i) => {
+          const diff = daysBetween(e.target, now);
+          const isPast = diff < 0;
+          const isToday = diff === 0;
+          const num = Math.abs(diff);
+          const stampCls = isToday ? 'today' : isPast ? 'past' : '';
+          const label = isToday ? 'TODAY' : isPast ? 'PAST' : 'D-DAY';
+          const dateNote = isToday ? '就是今天' : isPast ? `已過 ${num} 天` : `還有 ${num} 天`;
+          return (
+            <div className="cd-item" key={i}>
+              <div className={`cd-stamp ${stampCls}`}>
+                <div className="cd-num">{num}</div>
+                <div className="cd-day-label">{label}</div>
+              </div>
+              <div className="cd-info">
+                <div className="cd-name">
+                  {e.name}
+                  {e.yearly && <span className="cd-yearly-tag">年</span>}
+                </div>
+                <div className="cd-date">{e.date} · {dateNote}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// =================================================================
+// MAIN APP
+// =================================================================
+const TABS = [
+  { id: 'weather', label: '天　氣',   en: 'WEATHER',   Comp: WeatherPanel },
+  { id: 'cal',     label: '行事曆',   en: 'CALENDAR',  Comp: CalendarPanel },
+  { id: 'cd',      label: '倒數日',   en: 'D-DAY',     Comp: CountdownPanel },
+];
+const TAB_DURATION = 15000;
+
+function App() {
+  const [now, setNow] = useState(new Date());
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  // tick clock every second
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // tab cycler with progress bar
+  useEffect(() => {
+    const start = Date.now();
+    const id = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const p = Math.min(elapsed / TAB_DURATION, 1);
+      setProgress(p);
+      if (p >= 1) {
+        setActiveIdx(i => (i + 1) % TABS.length);
+      }
+    }, 80);
+    return () => clearInterval(id);
+  }, [activeIdx]);
+
+  const handleTabClick = (i) => setActiveIdx(i);
+
+  return (
+    <>
+      <Header now={now} />
+      <div className="hairline"></div>
+
+      <div className="content">
+        {TABS.map((T, i) => (
+          <div className={`tab-panel ${i === activeIdx ? 'active' : ''}`} key={T.id}>
+            <T.Comp now={now} />
+          </div>
+        ))}
+      </div>
+
+      <div className="footer">
+        <div className="tabs">
+          {TABS.map((T, i) => (
+            <span
+              key={T.id}
+              className={`tab-label ${i === activeIdx ? 'active' : ''}`}
+              onClick={() => handleTabClick(i)}
+            >
+              {T.label}
+            </span>
+          ))}
+        </div>
+        <span className="progress-num">{String(activeIdx + 1).padStart(2, '0')}/{String(TABS.length).padStart(2, '0')}</span>
+        <div className="progress">
+          <div className="progress-fill" style={{ width: `${progress * 100}%` }}></div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+</body>
+</html>

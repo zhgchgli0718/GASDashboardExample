@@ -1,0 +1,18 @@
+# Files in this list will NOT be pushed to Apps Script.
+# Patterns are gitignore-style.
+
+# Local-only docs and planning artifacts
+**/CLAUDE.md
+**/README.md
+**/*.md
+
+# Design reference (kept locally, not part of the deployed script)
+Design/**
+
+# macOS / editor cruft
+**/.DS_Store
+**/.git/**
+**/.gitignore
+**/.clasp.json
+**/.claspignore
+**/node_modules/**

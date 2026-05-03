@@ -1,0 +1,21 @@
+# clasp — local-only project binding (use .clasp.json.example as template)
+.clasp.json
+# clasp OAuth credentials (lives in $HOME but ignore here too as defense-in-depth)
+.clasprc.json
+
+# macOS
+.DS_Store
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+
+# Node
+node_modules/
+package-lock.json
+yarn.lock
+
+# Local plans / scratch
+.claude/
+*.local

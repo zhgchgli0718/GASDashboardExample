@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>紙感儀表 · Paper Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700;900&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.0/babel.min.js"></script>
+
+<style>
+  :root {
+    --bg: #f1ebdc;
+    --bg-deep: #e8e0cc;
+    --ink: #2a2520;
+    --ink-soft: #6b6358;
+    --ink-faint: #9a9080;
+    --hairline: #cdc3ae;
+    --stamp: #a0382e;
+    --stamp-deep: #7a2820;
+    --rain: #3a5a7a;
+    --warm: #b94a3a;
+    --cool: #2d5a3d;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background: #14110d;
+    overflow: hidden;
+    font-family: 'Noto Serif TC', 'Source Serif 4', Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #wrap {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  #stage {
+    width: 736px; height: 414px;
+    transform-origin: center center;
+    position: relative;
+  }
+
+  #device {
+    width: 736px; height: 414px;
+    background: var(--bg);
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.16  0 0 0 0 0.14  0 0 0 0 0.12  0 0 0 0.08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      radial-gradient(ellipse at 30% 20%, rgba(255,250,235,0.5), transparent 60%),
+      radial-gradient(ellipse at 80% 90%, rgba(160,56,46,0.04), transparent 60%);
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 30px 80px rgba(0,0,0,0.5),
+      0 8px 24px rgba(0,0,0,0.3),
+      inset 0 0 0 1px rgba(0,0,0,0.05);
+    color: var(--ink);
+  }
+
+  #device::before {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 60px rgba(120, 90, 50, 0.08);
+    z-index: 1;
+  }
+
+  /* === Header === */
+  .header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 88px;
+    display: flex;
+    align-items: stretch;
+    padding: 14px 24px 0 28px;
+    z-index: 2;
+  }
+
+  .date-block { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+  .date-line1 { font-size: 11px; letter-spacing: 0.32em; color: var(--ink-soft); text-transform: uppercase; font-weight: 500; font-family: 'Source Serif 4', serif; font-style: italic; }
+  .date-line2 { display: flex; align-items: baseline; gap: 14px; font-family: 'Noto Serif TC', serif; }
+  .date-num { font-size: 38px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; line-height: 1; font-feature-settings: 'lnum'; }
+  .date-num .slash { color: var(--ink-faint); font-weight: 400; margin: 0 2px; }
+  .date-weekday { font-size: 18px; color: var(--ink); letter-spacing: 0.15em; font-weight: 500; }
+  .date-line3 { font-size: 10px; color: var(--ink-faint); letter-spacing: 0.2em; font-family: 'Source Serif 4', serif; font-style: italic; margin-top: 2px; }
+
+  /* === Flip Clock === */
+  .clock { display: flex; align-items: center; gap: 4px; padding-top: 4px; }
+  .flip-group { display: flex; gap: 3px; }
+  .flip-card { position: relative; width: 44px; height: 60px; perspective: 360px; }
+  .flip-half { position: absolute; left: 0; right: 0; height: 30px; background: linear-gradient(180deg, #2f2920 0%, #221d18 100%); color: #f5efde; overflow: hidden; font-family: 'Source Serif 4', 'Noto Serif TC', serif; font-weight: 700; font-size: 56px; line-height: 60px; text-align: center; font-feature-settings: 'lnum', 'tnum'; }
+  .flip-half.top { top: 0; border-radius: 4px 4px 0 0; box-shadow: inset 0 -1px 0 #000, 0 1px 0 rgba(0,0,0,0.3); }
+  .flip-half.top > span { display: block; line-height: 60px; transform: translateY(0); }
+  .flip-half.bottom { bottom: 0; border-radius: 0 0 4px 4px; background: linear-gradient(180deg, #1d1814 0%, #2a2420 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+  .flip-half.bottom > span { display: block; line-height: 60px; transform: translateY(-30px); }
+  .flip-flap { position: absolute; left: 0; right: 0; height: 30px; overflow: hidden; backface-visibility: hidden; color: #f5efde; font-family: 'Source Serif 4', 'Noto Serif TC', serif; font-weight: 700; font-size: 56px; text-align: center; font-feature-settings: 'lnum', 'tnum'; z-index: 2; }
+  .flip-flap.flap-top { top: 0; background: linear-gradient(180deg, #2f2920 0%, #221d18 100%); border-radius: 4px 4px 0 0; transform-origin: bottom; animation: flap-down 0.32s cubic-bezier(0.4, 0, 0.7, 0.2) forwards; box-shadow: inset 0 -1px 0 #000; }
+  .flip-flap.flap-top > span { display: block; line-height: 60px; }
+  .flip-flap.flap-bottom { bottom: 0; background: linear-gradient(180deg, #1d1814 0%, #2a2420 100%); border-radius: 0 0 4px 4px; transform-origin: top; transform: rotateX(90deg); animation: flap-up 0.32s cubic-bezier(0.3, 0.85, 0.6, 1) 0.32s forwards; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+  .flip-flap.flap-bottom > span { display: block; line-height: 60px; transform: translateY(-30px); }
+
+  @keyframes flap-down { 0% { transform: rotateX(0); } 100% { transform: rotateX(-90deg); } }
+  @keyframes flap-up   { 0% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+
+  .clock-colon { color: var(--ink); font-family: 'Source Serif 4', serif; font-size: 38px; font-weight: 600; padding: 0 4px; line-height: 60px; height: 60px; display: flex; align-items: center; justify-content: center; opacity: 0.85; }
+
+  .flip-card.sec { width: 28px; height: 38px; perspective: 240px; }
+  .flip-card.sec .flip-half, .flip-card.sec .flip-flap { height: 19px; font-size: 36px; line-height: 38px; }
+  .flip-card.sec .flip-half > span, .flip-card.sec .flip-flap > span { line-height: 38px; }
+  .flip-card.sec .flip-half.bottom > span { transform: translateY(-19px); }
+  .flip-card.sec .flip-flap.flap-bottom > span { transform: translateY(-19px); }
+  .clock-colon.sec { font-size: 24px; height: 38px; line-height: 38px; padding: 0 2px; }
+
+  /* === Hairline divider === */
+  .hairline { position: absolute; top: 88px; left: 28px; right: 28px; height: 1px; background: var(--hairline); z-index: 2; }
+  .hairline::before { content: ''; position: absolute; top: 3px; left: 0; right: 0; height: 1px; background: var(--hairline); opacity: 0.5; }
+
+  /* === Tab content area === */
+  .content { position: absolute; top: 96px; left: 28px; right: 28px; bottom: 38px; z-index: 2; overflow: hidden; }
+
+  .tab-panel { position: absolute; inset: 0; opacity: 0; transform: translateY(8px); transition: opacity 0.45s ease, transform 0.45s ease; pointer-events: none; }
+  .tab-panel.active { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+  .panel-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+  .panel-title { font-family: 'Noto Serif TC', serif; font-size: 14px; font-weight: 500; letter-spacing: 0.45em; color: var(--ink); }
+  .panel-title-en { font-family: 'Source Serif 4', serif; font-style: italic; font-size: 11px; letter-spacing: 0.25em; color: var(--ink-faint); text-transform: uppercase; }
+
+  /* === Weather (single city, full width) === */
+  .weather-main { display: flex; flex-direction: column; gap: 8px; }
+  .weather-loc-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 2px; }
+  .weather-loc { font-family: 'Noto Serif TC', serif; font-size: 18px; letter-spacing: 0.4em; color: var(--ink); font-weight: 500; }
+  .weather-loc-en { font-family: 'Source Serif 4', serif; font-style: italic; font-size: 10px; letter-spacing: 0.22em; color: var(--ink-faint); text-transform: uppercase; }
+  .weather-cond { font-family: 'Noto Serif TC', 'Source Serif 4', serif; font-size: 12px; color: var(--ink-soft); letter-spacing: 0.12em; }
+
+  .weather-hero {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 24px;
+    border-top: 1px dashed var(--hairline);
+    border-bottom: 1px dashed var(--hairline);
+    padding: 8px 0;
+  }
+  .weather-hero-left { display: flex; flex-direction: column; gap: 4px; }
+  .weather-hero-temp {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 700;
+    font-size: 48px;
+    line-height: 1;
+    color: var(--ink);
+    font-feature-settings: 'lnum', 'tnum';
+    letter-spacing: -0.04em;
+    position: relative;
+    display: inline-block;
+  }
+  .weather-hero-temp .deg { font-size: 22px; font-weight: 400; color: var(--ink-soft); margin-left: 4px; }
+  .weather-hero-meta {
+    font-family: 'Noto Serif TC', 'Source Serif 4', serif;
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: 0.08em;
+    font-feature-settings: 'lnum', 'tnum';
+  }
+  .weather-hero-meta .sep { color: var(--ink-faint); margin: 0 6px; }
+  .weather-hero-icon { color: var(--ink); }
+
+  .weather-blocks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .wb {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 14px;
+    border-left: 1px solid var(--hairline);
+  }
+  .wb:first-child { border-left: none; padding-left: 0; }
+  .wb-label { font-family: 'Noto Serif TC', serif; font-size: 11px; letter-spacing: 0.35em; color: var(--ink); font-weight: 500; }
+  .wb-row1 { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+  .wb-icon { color: var(--ink); }
+  .wb-temp { font-family: 'Source Serif 4', serif; font-weight: 600; font-size: 16px; color: var(--ink); font-feature-settings: 'lnum', 'tnum'; letter-spacing: 0.02em; }
+  .wb-wx { font-family: 'Noto Serif TC', serif; font-size: 12px; color: var(--ink-soft); letter-spacing: 0.06em; }
+  .wb-meta { display: flex; gap: 12px; font-family: 'Noto Serif TC', 'Source Serif 4', serif; font-size: 10px; color: var(--ink-faint); letter-spacing: 0.08em; }
+  .wb-meta .pop { color: var(--stamp); }
+
+  .weather-issued {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 9px;
+    color: var(--ink-faint);
+    letter-spacing: 0.18em;
+    margin-top: 2px;
+    text-align: right;
+  }
+
+  /* === Calendar === */
+  .cal-now {
+    background: var(--bg-deep);
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100%' height='100%' fill='%23e8e0cc'/><line x1='0' y1='0' x2='100' y2='100' stroke='%23d4cdbf' stroke-width='0.3' opacity='0.4'/></svg>");
+    border: 1px solid var(--hairline);
+    padding: 14px 20px;
+    position: relative;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cal-now.ongoing::before { content: '進行中'; color: var(--cool); }
+  .cal-now.upcoming::before { content: '即將'; color: var(--stamp); }
+  .cal-now.later::before    { content: '稍候'; color: var(--ink-soft); }
+  .cal-now::before {
+    position: absolute; top: -8px; left: 16px;
+    background: var(--bg); padding: 0 8px;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 10px; letter-spacing: 0.4em; font-weight: 500;
+  }
+  .cal-event-title { font-family: 'Noto Serif TC', serif; font-size: 18px; font-weight: 500; color: var(--ink); margin-bottom: 4px; letter-spacing: 0.05em; }
+  .cal-event-meta { font-family: 'Source Serif 4', serif; font-style: italic; font-size: 11px; color: var(--ink-soft); letter-spacing: 0.15em; }
+  .cal-countdown { text-align: right; font-family: 'Source Serif 4', serif; }
+  .cal-cd-num { font-size: 44px; font-weight: 700; color: var(--stamp); line-height: 1; font-feature-settings: 'lnum', 'tnum'; }
+  .cal-cd-num.cool { color: var(--cool); }
+  .cal-cd-num.faint { color: var(--ink-soft); }
+  .cal-cd-unit { font-family: 'Noto Serif TC', serif; font-size: 11px; color: var(--ink-soft); letter-spacing: 0.4em; font-style: normal; margin-top: 2px; }
+
+  .cal-list-head { font-size: 9px; letter-spacing: 0.28em; color: var(--ink-faint); font-style: italic; font-family: 'Source Serif 4', serif; text-transform: uppercase; border-bottom: 1px solid var(--hairline); padding-bottom: 4px; margin-bottom: 2px; display: flex; justify-content: space-between; }
+  .cal-list { display: flex; flex-direction: column; }
+  .cal-row { display: grid; grid-template-columns: 110px 1fr 90px; align-items: center; padding: 5px 0; border-bottom: 1px dashed var(--hairline); font-size: 13px; }
+  .cal-row:last-child { border-bottom: none; }
+  .cal-row-time { font-family: 'Source Serif 4', serif; font-feature-settings: 'lnum', 'tnum'; color: var(--ink-soft); font-style: italic; }
+  .cal-row-name { font-family: 'Noto Serif TC', serif; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cal-row-loc { font-family: 'Source Serif 4', serif; font-style: italic; font-size: 10px; color: var(--ink-faint); letter-spacing: 0.08em; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cal-empty { font-family: 'Source Serif 4', serif; font-style: italic; font-size: 13px; color: var(--ink-faint); text-align: center; padding: 60px 0; letter-spacing: 0.1em; }
+  .cal-remain { font-family: 'Source Serif 4', serif; font-style: italic; font-size: 10px; color: var(--ink-faint); letter-spacing: 0.18em; text-align: right; margin-top: 6px; }
+
+  /* === Countdown === */
+  .cd-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 28px; }
+  .cd-item { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 14px; padding: 6px 0; border-bottom: 1px solid var(--hairline); }
+  .cd-stamp {
+    width: 60px; height: 60px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border: 2px solid var(--stamp);
+    color: var(--stamp);
+    font-family: 'Noto Serif TC', serif;
+    text-align: center;
+    transform: rotate(-2deg);
+    background: rgba(160, 56, 46, 0.04);
+    position: relative;
+  }
+  .cd-stamp.past { border-color: var(--ink-soft); color: var(--ink-soft); background: rgba(0,0,0,0.03); }
+  .cd-stamp.today { border-color: var(--cool); color: var(--cool); background: rgba(45, 90, 61, 0.05); }
+  .cd-stamp::before { content: ''; position: absolute; inset: -3px; border: 1px solid currentColor; opacity: 0.3; }
+  .cd-num { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 22px; line-height: 1; font-feature-settings: 'lnum', 'tnum'; }
+  .cd-day-label { font-size: 9px; letter-spacing: 0.25em; margin-top: 2px; font-style: italic; font-family: 'Source Serif 4', serif; }
+  .cd-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .cd-name { font-family: 'Noto Serif TC', serif; font-size: 14px; color: var(--ink); font-weight: 500; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cd-date { font-family: 'Source Serif 4', serif; font-style: italic; font-size: 10px; color: var(--ink-faint); letter-spacing: 0.1em; font-feature-settings: 'lnum'; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cd-elapsed { font-family: 'Noto Serif TC', serif; font-size: 9px; color: var(--ink-soft); letter-spacing: 0.2em; }
+  .cd-yearly-tag { display: inline-block; font-size: 8px; letter-spacing: 0.2em; color: var(--stamp); font-style: normal; font-family: 'Noto Serif TC', serif; border: 1px solid var(--stamp); padding: 0 4px; margin-left: 6px; transform: translateY(-1px); opacity: 0.75; }
+
+  /* === Footer === */
+  .footer { position: absolute; bottom: 0; left: 28px; right: 28px; height: 32px; z-index: 2; display: flex; align-items: center; gap: 14px; }
+  .tabs { display: flex; gap: 28px; flex: 1; }
+  .tab-label { font-family: 'Noto Serif TC', serif; font-size: 10px; letter-spacing: 0.32em; color: var(--ink-faint); cursor: pointer; transition: color 0.3s; position: relative; padding: 4px 0; }
+  .tab-label.active { color: var(--ink); font-weight: 500; }
+  .tab-label.active::before { content: ''; position: absolute; bottom: 0; left: -2px; width: 14px; height: 1px; background: var(--stamp); }
+  .progress { width: 96px; height: 1px; background: var(--hairline); position: relative; }
+  .progress-fill { position: absolute; top: -0.5px; left: 0; height: 2px; background: var(--ink); transition: width 0.1s linear; }
+  .progress-num { font-family: 'Source Serif 4', serif; font-style: italic; font-size: 10px; color: var(--ink-faint); font-feature-settings: 'lnum', 'tnum'; letter-spacing: 0.1em; min-width: 28px; }
+
+  /* === Token gate / loading / error overlays === */
+  .overlay {
+    position: absolute; inset: 0;
+    background: rgba(241, 235, 220, 0.97);
+    z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    padding: 0 60px;
+    text-align: center;
+  }
+  .overlay-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 16px;
+    letter-spacing: 0.4em;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .overlay-sub {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-faint);
+    letter-spacing: 0.2em;
+    margin-bottom: 18px;
+  }
+  .overlay-input {
+    width: 320px; max-width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--hairline);
+    background: var(--bg);
+    font-family: 'Source Serif 4', monospace;
+    font-size: 13px;
+    color: var(--ink);
+    letter-spacing: 0.04em;
+    outline: none;
+    text-align: center;
+  }
+  .overlay-input:focus { border-color: var(--ink); }
+  .overlay-btn {
+    margin-top: 12px;
+    padding: 8px 28px;
+    border: 1px solid var(--ink);
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Serif TC', serif;
+    font-size: 11px;
+    letter-spacing: 0.4em;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .overlay-btn:hover { background: var(--ink); color: var(--bg); }
+  .overlay-error {
+    margin-top: 14px;
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: var(--stamp);
+    letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <div id="stage">
+    <div id="device">
+      <div id="root"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.__BOOT__ = { tokenFromUrl: '<?= tokenFromUrl ?>' };
+</script>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+// ---- auto-scale 736×414 stage to viewport ----
+function fitStage() {
+  const stage = document.getElementById('stage');
+  if (!stage) return;
+  const s = Math.min(window.innerWidth / 736, window.innerHeight / 414);
+  stage.style.transform = `scale(${s})`;
+}
+window.addEventListener('resize', fitStage);
+window.addEventListener('load', fitStage);
+fitStage();
+
+// =================================================================
+// Token bootstrap + data fetcher
+// =================================================================
+const TOKEN_KEY = 'dashboard_token';
+
+function readToken() {
+  try {
+    const url = new URL(location.href);
+    const fromUrl = url.searchParams.get('token') || (window.__BOOT__ && window.__BOOT__.tokenFromUrl) || '';
+    if (fromUrl) {
+      localStorage.setItem(TOKEN_KEY, fromUrl);
+      url.searchParams.delete('token');
+      history.replaceState({}, '', url.toString());
+      return fromUrl;
+    }
+  } catch (_) {}
+  try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (_) { return ''; }
+}
+
+function saveToken(t) {
+  try { localStorage.setItem(TOKEN_KEY, t); } catch (_) {}
+}
+
+function clearToken() {
+  try { localStorage.removeItem(TOKEN_KEY); } catch (_) {}
+}
+
+function fetchData(token) {
+  // Apps Script Web App 跑在 googleusercontent iframe 裡，
+  // location.* 拿到的是沙箱 URL，不能直接 fetch 自家 /exec；
+  // 改用 google.script.run 跨 iframe 呼叫 server-side function apiGetData(token)。
+  return new Promise((resolve, reject) => {
+    if (!window.google || !google.script || !google.script.run) {
+      reject(new Error('google.script.run unavailable — open via the deployed /exec URL'));
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler((err) => reject(err instanceof Error ? err : new Error(String(err && err.message || err))))
+      .apiGetData(token);
+  });
+}
+
+// =================================================================
+// FLIP CLOCK
+// =================================================================
+function FlipDigit({ value, size = 'lg', duration = 640 }) {
+  const [current, setCurrent] = useState(value);
+  const [previous, setPrevious] = useState(value);
+  const [flipping, setFlipping] = useState(false);
+
+  useEffect(() => {
+    if (value !== current) {
+      setPrevious(current);
+      setFlipping(true);
+      const t = setTimeout(() => {
+        setCurrent(value);
+        setFlipping(false);
+      }, duration);
+      return () => clearTimeout(t);
+    }
+  }, [value, current, duration]);
+
+  const next = value;
+  const cls = `flip-card ${size === 'sm' ? 'sec' : ''}`;
+
+  return (
+    <div className={cls}>
+      <div className="flip-half top"><span>{flipping ? next : current}</span></div>
+      <div className="flip-half bottom"><span>{flipping ? previous : current}</span></div>
+      {flipping && (
+        <>
+          <div className="flip-flap flap-top" key={`t-${previous}-${next}`}><span>{previous}</span></div>
+          <div className="flip-flap flap-bottom" key={`b-${previous}-${next}`}><span>{next}</span></div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function FlipClock({ now }) {
+  const h = now.getHours();
+  const m = now.getMinutes();
+  const s = now.getSeconds();
+  const h1 = Math.floor(h / 10), h2 = h % 10;
+  const m1 = Math.floor(m / 10), m2 = m % 10;
+  const s1 = Math.floor(s / 10), s2 = s % 10;
+  return (
+    <div className="clock">
+      <div className="flip-group"><FlipDigit value={h1} /><FlipDigit value={h2} /></div>
+      <div className="clock-colon">:</div>
+      <div className="flip-group"><FlipDigit value={m1} /><FlipDigit value={m2} /></div>
+      <div className="clock-colon">:</div>
+      <div className="flip-group"><FlipDigit value={s1} duration={360} /><FlipDigit value={s2} duration={360} /></div>
+    </div>
+  );
+}
+
+// =================================================================
+// HEADER
+// =================================================================
+const WEEKDAYS_ZH = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+const WEEKDAYS_EN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS_EN   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function Header({ now }) {
+  const y = now.getFullYear();
+  const mo = now.getMonth() + 1;
+  const d = now.getDate();
+  const wd = now.getDay();
+  const week = Math.ceil((((now - new Date(y,0,1)) / 86400000) + new Date(y,0,1).getDay() + 1) / 7);
+  return (
+    <div className="header">
+      <div className="date-block">
+        <div className="date-line1">A.D. {y} · {MONTHS_EN[mo-1]}</div>
+        <div className="date-line2">
+          <span className="date-num">{mo}<span className="slash">/</span>{d}</span>
+          <span className="date-weekday">{WEEKDAYS_ZH[wd]}</span>
+        </div>
+        <div className="date-line3">{WEEKDAYS_EN[wd]} &nbsp;·&nbsp; week {week}</div>
+      </div>
+      <FlipClock now={now} />
+    </div>
+  );
+}
+
+// =================================================================
+// TAB 1 — WEATHER (single city, 3 forecast blocks)
+// =================================================================
+function WeatherIcon({ type, size = 22 }) {
+  const stroke = 'currentColor';
+  const props = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke, strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' };
+  if (type === 'sun')    return <svg {...props}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>;
+  if (type === 'cloud')  return <svg {...props}><path d="M7 18a4 4 0 010-8 6 6 0 0111.5 1.5A4 4 0 0117 18H7z"/></svg>;
+  if (type === 'rain')   return <svg {...props}><path d="M7 14a4 4 0 010-8 6 6 0 0111.5 1.5A4 4 0 0117 14H7z"/><path d="M9 18l-1 3M13 18l-1 3M17 18l-1 3"/></svg>;
+  if (type === 'partly') return <svg {...props}><circle cx="8" cy="9" r="3"/><path d="M11 16a3 3 0 010-6 5 5 0 019.5 1.5A3 3 0 0119 16h-8z"/></svg>;
+  return null;
+}
+
+function fmtRange(minT, maxT) {
+  if (minT == null && maxT == null) return '—';
+  if (minT == null) return `${maxT}°`;
+  if (maxT == null) return `${minT}°`;
+  if (minT === maxT) return `${minT}°`;
+  return `${minT}° – ${maxT}°`;
+}
+
+function fmtIssued(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('zh-Hant-TW', { hour12: false, hour: '2-digit', minute: '2-digit', month: '2-digit', day: '2-digit' });
+  } catch (_) { return iso; }
+}
+
+function WeatherPanel({ data }) {
+  if (!data) return <div className="cal-empty">天氣讀取中…</div>;
+  if (data.error) return <div className="cal-empty">天氣讀取失敗：{data.error}</div>;
+  const blocks = data.blocks || [];
+  const head = blocks[0] || {};
+  const range = fmtRange(head.minT, head.maxT);
+
+  return (
+    <div className="tab-panel-inner">
+      <div className="panel-head">
+        <span className="panel-title">天　氣</span>
+        <span className="panel-title-en">CWA · 36-hr forecast</span>
+      </div>
+
+      <div className="weather-main">
+        <div className="weather-loc-row">
+          <span className="weather-loc">{data.location || '—'}</span>
+          <span className="weather-loc-en">F-C0032-001</span>
+        </div>
+        <div className="weather-cond">{head.wx || '—'}{head.ci ? ` · ${head.ci}` : ''}</div>
+
+        <div className="weather-hero">
+          <div className="weather-hero-left">
+            <span className="weather-hero-temp">{range}</span>
+            <span className="weather-hero-meta">
+              {head.label || '本時段'} <span className="sep">·</span>
+              降雨機率 {head.pop != null ? `${head.pop}%` : '—'}
+            </span>
+          </div>
+          <div className="weather-hero-icon"><WeatherIcon type={head.icon || 'cloud'} size={56} /></div>
+        </div>
+
+        <div className="weather-blocks">
+          {blocks.map((b, i) => (
+            <div className="wb" key={i}>
+              <div className="wb-label">{b.label || `區段 ${i+1}`}</div>
+              <div className="wb-row1">
+                <span className="wb-icon"><WeatherIcon type={b.icon || 'cloud'} size={20} /></span>
+                <span className="wb-temp">{fmtRange(b.minT, b.maxT)}</span>
+              </div>
+              <div className="wb-wx">{b.wx || ''}</div>
+              <div className="wb-meta">
+                <span className="pop">降雨 {b.pop != null ? `${b.pop}%` : '—'}</span>
+                {b.ci && <span>{b.ci}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="weather-issued">issued {fmtIssued(data.issued)}</div>
+      </div>
+    </div>
+  );
+}
+
+// =================================================================
+// TAB 2 — CALENDAR
+// =================================================================
+function CalendarPanel({ data }) {
+  if (!data) return <div className="cal-empty">行事曆讀取中…</div>;
+  if (data.error) return <div className="cal-empty">行事曆讀取失敗：{data.error}</div>;
+  const events = data.events || [];
+  if (events.length === 0) {
+    return (
+      <div className="tab-panel-inner">
+        <div className="panel-head">
+          <span className="panel-title">行　事　曆</span>
+          <span className="panel-title-en">Today · 0 events</span>
+        </div>
+        <div className="cal-empty">今日無行程 · no events today</div>
+      </div>
+    );
+  }
+
+  const focal = events[0];
+  const rest = events.slice(1);
+  const visibleRest = rest.slice(0, 3);
+  const hiddenCount = rest.length - visibleRest.length;
+  const focalCls = focal.status === 'ongoing' ? 'ongoing' : focal.status === 'upcoming' ? 'upcoming' : 'later';
+  const cdLabel = focal.status === 'ongoing' ? '分　鐘　剩' : focal.status === 'upcoming' ? '分　鐘　後' : '分　鐘　後';
+  const cdNumCls = focal.status === 'ongoing' ? 'cool' : focal.status === 'later' ? 'faint' : '';
+
+  return (
+    <div className="tab-panel-inner">
+      <div className="panel-head">
+        <span className="panel-title">行　事　曆</span>
+        <span className="panel-title-en">Today · {events.length} events</span>
+      </div>
+      <div className={`cal-now ${focalCls}`}>
+        <div>
+          <div className="cal-event-title">{focal.name}</div>
+          <div className="cal-event-meta">{focal.time} &nbsp;·&nbsp; {focal.loc || '—'}</div>
+        </div>
+        <div className="cal-countdown">
+          <div className={`cal-cd-num ${cdNumCls}`}>{focal.remainMin}</div>
+          <div className="cal-cd-unit">{cdLabel}</div>
+        </div>
+      </div>
+      {visibleRest.length > 0 && (
+        <>
+          <div className="cal-list-head">
+            <span>upcoming · 之後</span>
+            <span>location</span>
+          </div>
+          <div className="cal-list">
+            {visibleRest.map((e, i) => (
+              <div className="cal-row" key={i}>
+                <span className="cal-row-time">{e.time}</span>
+                <span className="cal-row-name">{e.name}</span>
+                <span className="cal-row-loc">{e.loc || ''}</span>
+              </div>
+            ))}
+          </div>
+          {hiddenCount > 0 && (
+            <div className="cal-remain">…and {hiddenCount} more</div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// =================================================================
+// TAB 3 — COUNTDOWN
+// =================================================================
+function CountdownPanel({ data }) {
+  if (!data) return <div className="cal-empty">倒數日讀取中…</div>;
+  if (data.error) return <div className="cal-empty">倒數日讀取失敗：{data.error}</div>;
+  const events = data.events || [];
+  if (events.length === 0) {
+    return (
+      <div className="tab-panel-inner">
+        <div className="panel-head">
+          <span className="panel-title">倒　數　日</span>
+          <span className="panel-title-en">D-Day · counting</span>
+        </div>
+        <div className="cal-empty">尚無倒數項目</div>
+      </div>
+    );
+  }
+  return (
+    <div className="tab-panel-inner">
+      <div className="panel-head">
+        <span className="panel-title">倒　數　日</span>
+        <span className="panel-title-en">D-Day · {events.length} items</span>
+      </div>
+      <div className="cd-grid">
+        {events.map((e, i) => {
+          let num, label, stampCls, dateNote;
+          if (e.repeat) {
+            num = e.daysUntilNext || 0;
+            label = num === 0 ? 'TODAY' : 'D-DAY';
+            stampCls = num === 0 ? 'today' : '';
+            dateNote = num === 0 ? '就是今天' : `還有 ${num} 天`;
+          } else {
+            const diff = e.daysDiff;
+            num = Math.abs(diff);
+            const isToday = diff === 0;
+            const isPast = diff < 0;
+            label = isToday ? 'TODAY' : isPast ? 'PAST' : 'D-DAY';
+            stampCls = isToday ? 'today' : isPast ? 'past' : '';
+            dateNote = isToday ? '就是今天' : isPast ? `已過 ${num} 天` : `還有 ${num} 天`;
+          }
+          return (
+            <div className="cd-item" key={i}>
+              <div className={`cd-stamp ${stampCls}`}>
+                <div className="cd-num">{num}</div>
+                <div className="cd-day-label">{label}</div>
+              </div>
+              <div className="cd-info">
+                <div className="cd-name">
+                  {e.title}
+                  {e.repeat && <span className="cd-yearly-tag">年</span>}
+                </div>
+                <div className="cd-date">{e.date} · {dateNote}</div>
+                {e.repeat && (
+                  <div className="cd-elapsed">已過　{e.yearsPassed || 0} 年 {e.monthsPassed || 0} 月</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// =================================================================
+// TOKEN GATE OVERLAY
+// =================================================================
+function TokenGate({ initial, error, onSubmit }) {
+  const [val, setVal] = useState(initial || '');
+  const submit = (e) => {
+    e.preventDefault();
+    const t = val.trim();
+    if (t) onSubmit(t);
+  };
+  return (
+    <div className="overlay">
+      <div className="overlay-title">需要存取 Token</div>
+      <div className="overlay-sub">access token required</div>
+      <form onSubmit={submit} style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
+        <input
+          className="overlay-input"
+          type="password"
+          placeholder="輸入 Token / paste token"
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          autoFocus
+        />
+        <button className="overlay-btn" type="submit">確 認</button>
+      </form>
+      {error && <div className="overlay-error">{error}</div>}
+    </div>
+  );
+}
+
+function LoadingOverlay() {
+  return (
+    <div className="overlay">
+      <div className="overlay-title">載 入 中</div>
+      <div className="overlay-sub">loading…</div>
+    </div>
+  );
+}
+
+// =================================================================
+// MAIN APP
+// =================================================================
+const TABS = [
+  { id: 'weather', label: '天　氣', en: 'WEATHER',  key: 'weather' },
+  { id: 'cal',     label: '行事曆', en: 'CALENDAR', key: 'calendar' },
+  { id: 'cd',      label: '倒數日', en: 'D-DAY',    key: 'countdown' },
+];
+const TAB_DURATION = 15000;
+const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 min
+
+function App() {
+  const [now, setNow] = useState(new Date());
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  const [token, setToken] = useState(() => readToken());
+  const [data, setData] = useState(null);
+  const [authState, setAuthState] = useState(token ? 'loading' : 'need_token'); // need_token | loading | ok | bad_token | error
+  const [errMsg, setErrMsg] = useState('');
+
+  // tick clock every second
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // tab cycler
+  useEffect(() => {
+    const start = Date.now();
+    const id = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const p = Math.min(elapsed / TAB_DURATION, 1);
+      setProgress(p);
+      if (p >= 1) setActiveIdx(i => (i + 1) % TABS.length);
+    }, 80);
+    return () => clearInterval(id);
+  }, [activeIdx]);
+
+  const load = useCallback(async (t) => {
+    if (!t) { setAuthState('need_token'); return; }
+    setAuthState(prev => (prev === 'ok' ? 'ok' : 'loading'));
+    setErrMsg('');
+    try {
+      const json = await fetchData(t);
+      if (json && json.ok) {
+        setData(json);
+        setAuthState('ok');
+      } else if (json && json.error === 'unauthorized') {
+        clearToken();
+        setData(null);
+        setAuthState('bad_token');
+        setErrMsg('Token 不正確');
+      } else {
+        setAuthState('error');
+        setErrMsg((json && json.error) || '未知錯誤');
+      }
+    } catch (e) {
+      setAuthState('error');
+      setErrMsg(String(e && e.message || e));
+    }
+  }, []);
+
+  // initial + periodic refresh
+  useEffect(() => { load(token); }, [token, load]);
+  useEffect(() => {
+    if (authState !== 'ok') return;
+    const id = setInterval(() => load(token), REFRESH_INTERVAL);
+    return () => clearInterval(id);
+  }, [authState, token, load]);
+
+  const handleTokenSubmit = (t) => {
+    saveToken(t);
+    setToken(t);
+  };
+
+  const showGate = authState === 'need_token' || authState === 'bad_token';
+  const showLoading = authState === 'loading' && !data;
+
+  return (
+    <>
+      <Header now={now} />
+      <div className="hairline"></div>
+
+      <div className="content">
+        {TABS.map((T, i) => (
+          <div className={`tab-panel ${i === activeIdx ? 'active' : ''}`} key={T.id}>
+            {T.key === 'weather'   && <WeatherPanel   data={data && data.weather} />}
+            {T.key === 'calendar'  && <CalendarPanel  data={data && data.calendar} />}
+            {T.key === 'countdown' && <CountdownPanel data={data && data.countdown} />}
+          </div>
+        ))}
+      </div>
+
+      <div className="footer">
+        <div className="tabs">
+          {TABS.map((T, i) => (
+            <span
+              key={T.id}
+              className={`tab-label ${i === activeIdx ? 'active' : ''}`}
+              onClick={() => setActiveIdx(i)}
+            >
+              {T.label}
+            </span>
+          ))}
+        </div>
+        <span className="progress-num">{String(activeIdx + 1).padStart(2, '0')}/{String(TABS.length).padStart(2, '0')}</span>
+        <div className="progress">
+          <div className="progress-fill" style={{ width: `${progress * 100}%` }}></div>
+        </div>
+      </div>
+
+      {showGate   && <TokenGate initial="" error={errMsg} onSubmit={handleTokenSubmit} />}
+      {showLoading && <LoadingOverlay />}
+      {authState === 'error' && (
+        <div className="overlay">
+          <div className="overlay-title">讀 取 失 敗</div>
+          <div className="overlay-sub">data fetch failed</div>
+          <div className="overlay-error">{errMsg}</div>
+          <button className="overlay-btn" onClick={() => load(token)} style={{marginTop:14}}>重 試</button>
+        </div>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+</body>
+</html>
